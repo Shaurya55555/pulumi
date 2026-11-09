@@ -716,7 +716,9 @@ message CheckFailure {
     // The reason that the named property failed validation.
     string reason = 2;
 
-    // Commands the user can run to resolve the failure, such as signing in to refresh expired credentials.
+    // Commands the user can run to resolve the failure, such as signing in to refresh expired credentials. Only used in
+    // a [](pulumirpc.ResourceProvider.CheckConfig) response; the engine ignores remediations returned from
+    // [](pulumirpc.ResourceProvider.Check).
     repeated CommandRemediation remediations = 3;
 }
 

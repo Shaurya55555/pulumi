@@ -611,7 +611,8 @@ type CheckFailure struct {
 	Property resource.PropertyKey // the property that failed checking.
 	Reason   string               // the reason the property failed to check.
 
-	// Remediations are commands the user can run to resolve the failure.
+	// Remediations are commands the user can run to resolve the failure. Only used in a CheckConfig response; the engine
+	// ignores remediations returned from Check.
 	Remediations []CommandRemediation
 }
 

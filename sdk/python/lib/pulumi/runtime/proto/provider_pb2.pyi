@@ -1031,7 +1031,10 @@ class CheckFailure(google.protobuf.message.Message):
     """The reason that the named property failed validation."""
     @property
     def remediations(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___CommandRemediation]:
-        """Commands the user can run to resolve the failure, such as signing in to refresh expired credentials."""
+        """Commands the user can run to resolve the failure, such as signing in to refresh expired credentials. Only used in
+        a [](pulumirpc.ResourceProvider.CheckConfig) response; the engine ignores remediations returned from
+        [](pulumirpc.ResourceProvider.Check).
+        """
 
     def __init__(
         self,
