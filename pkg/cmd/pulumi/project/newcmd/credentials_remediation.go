@@ -17,7 +17,6 @@ package newcmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 
@@ -26,33 +25,25 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
 )
 
-// remediationOffer offers to run the command a provider suggested to fix a credentials problem.
-type remediationOffer struct {
-	stdout  io.Writer
-	confirm func(prompt string) bool
-	run     func(ctx context.Context, r plugin.CommandRemediation) error
-}
-
-// offer asks the user whether to run the provider's first suggested command, runs it if they
-// agree, and reports whether it succeeded.
-func (o remediationOffer) offer(ctx context.Context, problem *credentialcheck.Problem) bool {
-	remediations := problem.Remediations()
-	if len(remediations) == 0 {
+// offerRemediation asks the user whether to run the command the provider suggested to fix
+// problem, runs it if they agree, and reports whether it succeeded.
+func (pf credentialsPreflight) offerRemediation(ctx context.Context, problem *credentialcheck.Problem) bool {
+	r, ok := problem.Remediation()
+	if !ok || pf.confirm == nil {
 		return false
 	}
-	r := remediations[0]
 	command := shellquote.Join(r.Command...)
 	prompt := fmt.Sprintf("Run `%s` now?", command)
 	if r.Description != "" {
 		prompt = fmt.Sprintf("%s now? This runs `%s`.", r.Description, command)
 	}
-	if !o.confirm(prompt) {
-		fmt.Fprintln(o.stdout)
+	if !pf.confirm(prompt) {
+		fmt.Fprintln(pf.stdout)
 		return false
 	}
-	if err := o.run(ctx, r); err != nil {
+	if err := pf.run(ctx, r); err != nil {
 		if ctx.Err() == nil {
-			fmt.Fprintf(o.stdout, "`%s` did not complete; run it yourself, then `pulumi up`.\n\n", command)
+			fmt.Fprintf(pf.stdout, "`%s` did not complete; run it yourself, then `pulumi up`.\n\n", command)
 		}
 		return false
 	}

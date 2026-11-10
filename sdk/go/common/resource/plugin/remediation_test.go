@@ -15,28 +15,21 @@
 package plugin
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/rpcutil/rpcerror"
 	pulumirpc "github.com/pulumi/pulumi/sdk/v3/proto/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
-
-var signIn = &pulumirpc.CommandRemediation{
-	Description: "Sign in to AWS",
-	Command:     []string{"aws", "login", "--region", "us-west-2"},
-	Env:         map[string]string{"AWS_CLI_AGENT_TOOLKIT_HINT_DISABLED": "true"},
-	Interactive: true,
-}
 
 func TestCheckFailureRemediationsRoundTrip(t *testing.T) {
 	t.Parallel()
 
+	signIn := &pulumirpc.CommandRemediation{
+		Description: "Sign in to AWS",
+		Command:     []string{"aws", "login", "--region", "us-west-2"},
+		Env:         map[string]string{"AWS_CLI_AGENT_TOOLKIT_HINT_DISABLED": "true"},
+	}
 	rpc := &pulumirpc.CheckFailure{
 		Property: "region",
 		Reason:   "No valid credential sources found.",
@@ -55,7 +48,6 @@ func TestCheckFailureRemediationsRoundTrip(t *testing.T) {
 			Description: "Sign in to AWS",
 			Command:     []string{"aws", "login", "--region", "us-west-2"},
 			Env:         map[string]string{"AWS_CLI_AGENT_TOOLKIT_HINT_DISABLED": "true"},
-			Interactive: true,
 		}},
 	}, failure)
 
@@ -63,9 +55,9 @@ func TestCheckFailureRemediationsRoundTrip(t *testing.T) {
 	assert.Equal(t, "region", back.GetProperty())
 	assert.Equal(t, rpc.GetReason(), back.GetReason())
 	require.Len(t, back.GetRemediations(), 1)
+	assert.Equal(t, signIn.GetDescription(), back.GetRemediations()[0].GetDescription())
 	assert.Equal(t, signIn.GetCommand(), back.GetRemediations()[0].GetCommand())
 	assert.Equal(t, signIn.GetEnv(), back.GetRemediations()[0].GetEnv())
-	assert.True(t, back.GetRemediations()[0].GetInteractive())
 }
 
 func TestCheckFailureWithoutRemediations(t *testing.T) {
@@ -74,28 +66,4 @@ func TestCheckFailureWithoutRemediations(t *testing.T) {
 	failure := checkFailureFromRPC(&pulumirpc.CheckFailure{Property: "region", Reason: "missing"})
 	assert.Equal(t, CheckFailure{Property: "region", Reason: "missing"}, failure)
 	assert.Empty(t, checkFailureToRPC(failure).GetRemediations())
-}
-
-func TestConfigureErrorRemediations(t *testing.T) {
-	t.Parallel()
-
-	st, err := status.New(codes.Unknown, "The AWS SSO session has expired.").WithDetails(signIn)
-	require.NoError(t, err)
-	want := []CommandRemediation{{
-		Description: "Sign in to AWS",
-		Command:     []string{"aws", "login", "--region", "us-west-2"},
-		Env:         map[string]string{"AWS_CLI_AGENT_TOOLKIT_HINT_DISABLED": "true"},
-		Interactive: true,
-	}}
-
-	// As the provider client returns it from Configure.
-	converted := createConfigureError(rpcerror.Convert(st.Err()))
-	assert.Equal(t, want, ConfigureErrorRemediations(converted))
-	assert.Equal(t, want, ConfigureErrorRemediations(fmt.Errorf("configure: %w", converted)))
-	// As a raw gRPC status error.
-	assert.Equal(t, want, ConfigureErrorRemediations(st.Err()))
-
-	assert.Empty(t, ConfigureErrorRemediations(status.Error(codes.Unknown, "no details")))
-	assert.Empty(t, ConfigureErrorRemediations(errors.New("not an RPC error")))
-	assert.Empty(t, ConfigureErrorRemediations(nil))
 }

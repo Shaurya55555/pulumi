@@ -1683,8 +1683,8 @@ func (x *CheckFailure) GetRemediations() []*CommandRemediation {
 }
 
 // A `CommandRemediation` describes a command that the user can run to resolve a problem a provider reported, such as
-// missing or expired credentials. It may appear in a [](pulumirpc.CheckFailure) or as a detail of the error returned
-// by [](pulumirpc.ResourceProvider.Configure).
+// missing or expired credentials. Providers return it in a [](pulumirpc.CheckFailure) from
+// [](pulumirpc.ResourceProvider.CheckConfig).
 //
 // The engine must not run a remediation without showing its command to the user and getting their consent. Providers
 // should only offer a remediation that can run on the current machine, and should keep describing the fix in the
@@ -1694,12 +1694,10 @@ type CommandRemediation struct {
 	// A short, imperative summary of what the command does, such as "Sign in to AWS".
 	Description string `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
 	// The command to run, as an argument vector. The first element is the program, which is looked up on `PATH`. The
-	// command is run directly, without a shell.
+	// command is run directly, without a shell, attached to the user's terminal so that it can prompt.
 	Command []string `protobuf:"bytes,2,rep,name=command,proto3" json:"command,omitempty"`
 	// Environment variables to set for the command, in addition to the engine's own environment.
-	Env map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// True if the command needs the user's terminal, for example to prompt or to show a device code.
-	Interactive   bool `protobuf:"varint,4,opt,name=interactive,proto3" json:"interactive,omitempty"`
+	Env           map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1753,13 +1751,6 @@ func (x *CommandRemediation) GetEnv() map[string]string {
 		return x.Env
 	}
 	return nil
-}
-
-func (x *CommandRemediation) GetInteractive() bool {
-	if x != nil {
-		return x.Interactive
-	}
-	return false
 }
 
 // `DiffRequest` is the type of requests sent as part of [](pulumirpc.ResourceProvider.DiffConfig) and
@@ -4672,12 +4663,11 @@ const file_pulumi_provider_proto_rawDesc = "" +
 	"\fCheckFailure\x12\x1a\n" +
 	"\bproperty\x18\x01 \x01(\tR\bproperty\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12A\n" +
-	"\fremediations\x18\x03 \x03(\v2\x1d.pulumirpc.CommandRemediationR\fremediations\"\xe4\x01\n" +
+	"\fremediations\x18\x03 \x03(\v2\x1d.pulumirpc.CommandRemediationR\fremediations\"\xc2\x01\n" +
 	"\x12CommandRemediation\x12 \n" +
 	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x18\n" +
 	"\acommand\x18\x02 \x03(\tR\acommand\x128\n" +
-	"\x03env\x18\x03 \x03(\v2&.pulumirpc.CommandRemediation.EnvEntryR\x03env\x12 \n" +
-	"\vinteractive\x18\x04 \x01(\bR\vinteractive\x1a6\n" +
+	"\x03env\x18\x03 \x03(\v2&.pulumirpc.CommandRemediation.EnvEntryR\x03env\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8f\x02\n" +

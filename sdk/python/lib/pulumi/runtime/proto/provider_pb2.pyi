@@ -1050,8 +1050,8 @@ global___CheckFailure = CheckFailure
 @typing.final
 class CommandRemediation(google.protobuf.message.Message):
     """A `CommandRemediation` describes a command that the user can run to resolve a problem a provider reported, such as
-    missing or expired credentials. It may appear in a [](pulumirpc.CheckFailure) or as a detail of the error returned
-    by [](pulumirpc.ResourceProvider.Configure).
+    missing or expired credentials. Providers return it in a [](pulumirpc.CheckFailure) from
+    [](pulumirpc.ResourceProvider.CheckConfig).
 
     The engine must not run a remediation without showing its command to the user and getting their consent. Providers
     should only offer a remediation that can run on the current machine, and should keep describing the fix in the
@@ -1079,15 +1079,12 @@ class CommandRemediation(google.protobuf.message.Message):
     DESCRIPTION_FIELD_NUMBER: builtins.int
     COMMAND_FIELD_NUMBER: builtins.int
     ENV_FIELD_NUMBER: builtins.int
-    INTERACTIVE_FIELD_NUMBER: builtins.int
     description: builtins.str
     """A short, imperative summary of what the command does, such as "Sign in to AWS"."""
-    interactive: builtins.bool
-    """True if the command needs the user's terminal, for example to prompt or to show a device code."""
     @property
     def command(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]:
         """The command to run, as an argument vector. The first element is the program, which is looked up on `PATH`. The
-        command is run directly, without a shell.
+        command is run directly, without a shell, attached to the user's terminal so that it can prompt.
         """
 
     @property
@@ -1100,9 +1097,8 @@ class CommandRemediation(google.protobuf.message.Message):
         description: builtins.str = ...,
         command: collections.abc.Iterable[builtins.str] | None = ...,
         env: collections.abc.Mapping[builtins.str, builtins.str] | None = ...,
-        interactive: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["command", b"command", "description", b"description", "env", b"env", "interactive", b"interactive"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["command", b"command", "description", b"description", "env", b"env"]) -> None: ...
 
 global___CommandRemediation = CommandRemediation
 

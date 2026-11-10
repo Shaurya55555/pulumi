@@ -786,8 +786,6 @@ export class CommandRemediation extends jspb.Message {
 
     getEnvMap(): jspb.Map<string, string>;
     clearEnvMap(): void;
-    getInteractive(): boolean;
-    setInteractive(value: boolean): CommandRemediation;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CommandRemediation.AsObject;
@@ -805,7 +803,6 @@ export namespace CommandRemediation {
         commandList: Array<string>,
 
         envMap: Array<[string, string]>,
-        interactive: boolean,
     }
 }
 

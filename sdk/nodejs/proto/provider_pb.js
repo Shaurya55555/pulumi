@@ -6888,8 +6888,7 @@ proto.pulumirpc.CommandRemediation.toObject = function(includeInstance, msg) {
   var f, obj = {
 description: jspb.Message.getFieldWithDefault(msg, 1, ""),
 commandList: (f = jspb.Message.getRepeatedField(msg, 2)) == null ? undefined : f,
-envMap: (f = msg.getEnvMap()) ? f.toObject(includeInstance, undefined) : [],
-interactive: jspb.Message.getBooleanFieldWithDefault(msg, 4, false)
+envMap: (f = msg.getEnvMap()) ? f.toObject(includeInstance, undefined) : []
   };
 
   if (includeInstance) {
@@ -6940,10 +6939,6 @@ proto.pulumirpc.CommandRemediation.deserializeBinaryFromReader = function(msg, r
         jspb.Map.deserializeBinary(message, reader, jspb.BinaryReader.prototype.readString, jspb.BinaryReader.prototype.readString, null, "", "");
          });
       break;
-    case 4:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setInteractive(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -6990,13 +6985,6 @@ proto.pulumirpc.CommandRemediation.serializeBinaryToWriter = function(message, w
   f = message.getEnvMap(true);
   if (f && f.getLength() > 0) {
     f.serializeBinary(3, writer, jspb.BinaryWriter.prototype.writeString, jspb.BinaryWriter.prototype.writeString);
-  }
-  f = message.getInteractive();
-  if (f) {
-    writer.writeBool(
-      4,
-      f
-    );
   }
 };
 
@@ -7076,24 +7064,6 @@ proto.pulumirpc.CommandRemediation.prototype.getEnvMap = function(opt_noLazyCrea
 proto.pulumirpc.CommandRemediation.prototype.clearEnvMap = function() {
   this.getEnvMap().clear();
   return this;
-};
-
-
-/**
- * optional bool interactive = 4;
- * @return {boolean}
- */
-proto.pulumirpc.CommandRemediation.prototype.getInteractive = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 4, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.pulumirpc.CommandRemediation} returns this
- */
-proto.pulumirpc.CommandRemediation.prototype.setInteractive = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 4, value);
 };
 
 

@@ -25,7 +25,6 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
-	pulumirpc "github.com/pulumi/pulumi/sdk/v3/proto/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -365,13 +364,13 @@ func TestProbeTimeout(t *testing.T) {
 	assert.NotErrorAs(t, err, &problem, "a cancelled check says nothing about the credentials")
 }
 
-func TestProbeRemediations(t *testing.T) {
+func TestProbeRemediation(t *testing.T) {
 	t.Parallel()
 
 	signIn := plugin.CommandRemediation{Description: "Sign in to AWS", Command: []string{"aws", "login"}}
 	ssoSignIn := plugin.CommandRemediation{Description: "Sign in to AWS", Command: []string{"aws", "sso", "login"}}
 
-	t.Run("CheckConfig failures", func(t *testing.T) {
+	t.Run("first of several", func(t *testing.T) {
 		t.Parallel()
 
 		mock := &plugin.MockProvider{
@@ -379,44 +378,30 @@ func TestProbeRemediations(t *testing.T) {
 				return plugin.CheckConfigResponse{Failures: []plugin.CheckFailure{
 					{Property: "region", Reason: "expected a valid region"},
 					{Reason: "No valid credential sources found.", Remediations: []plugin.CommandRemediation{signIn}},
+					{Reason: "The SSO session has expired.", Remediations: []plugin.CommandRemediation{ssoSignIn}},
 				}}, nil
 			},
 		}
 		var problem *Problem
 		require.ErrorAs(t, probe(t.Context(), awsProvider, mock, property.Map{}), &problem)
-		assert.Equal(t, []plugin.CommandRemediation{signIn}, problem.Remediations())
-		assert.Equal(t, awsProvider, problem.Info())
-	})
-
-	t.Run("Configure error", func(t *testing.T) {
-		t.Parallel()
-
-		st, err := status.New(codes.Unknown, "The AWS SSO session has expired.").WithDetails(
-			&pulumirpc.CommandRemediation{Description: ssoSignIn.Description, Command: ssoSignIn.Command})
-		require.NoError(t, err)
-		mock := &plugin.MockProvider{
-			CheckConfigF: echoCheckConfig,
-			ConfigureF: func(context.Context, plugin.ConfigureRequest) (plugin.ConfigureResponse, error) {
-				return plugin.ConfigureResponse{}, st.Err()
-			},
-		}
-		var problem *Problem
-		require.ErrorAs(t, probe(t.Context(), awsProvider, mock, property.Map{}), &problem)
-		assert.Equal(t, []plugin.CommandRemediation{ssoSignIn}, problem.Remediations())
-		assert.Contains(t, problem.Error(), "The AWS SSO session has expired.")
+		remediation, ok := problem.Remediation()
+		require.True(t, ok)
+		assert.Equal(t, signIn, remediation)
 	})
 
 	t.Run("none", func(t *testing.T) {
 		t.Parallel()
 
 		mock := &plugin.MockProvider{
-			CheckConfigF: echoCheckConfig,
-			ConfigureF: func(context.Context, plugin.ConfigureRequest) (plugin.ConfigureResponse, error) {
-				return plugin.ConfigureResponse{}, status.Error(codes.Unknown, "invalid credentials")
+			CheckConfigF: func(context.Context, plugin.CheckConfigRequest) (plugin.CheckConfigResponse, error) {
+				return plugin.CheckConfigResponse{Failures: []plugin.CheckFailure{
+					{Reason: "No valid credential sources found."},
+				}}, nil
 			},
 		}
 		var problem *Problem
 		require.ErrorAs(t, probe(t.Context(), awsProvider, mock, property.Map{}), &problem)
-		assert.Empty(t, problem.Remediations())
+		_, ok := problem.Remediation()
+		assert.False(t, ok)
 	})
 }
