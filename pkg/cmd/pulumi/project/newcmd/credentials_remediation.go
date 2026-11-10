@@ -28,8 +28,8 @@ import (
 // offerRemediation asks the user whether to run the command the provider suggested to fix
 // problem, runs it if they agree, and reports whether it succeeded.
 func (pf credentialsPreflight) offerRemediation(ctx context.Context, problem *credentialcheck.Problem) bool {
-	r, ok := problem.Remediation()
-	if !ok || pf.confirm == nil {
+	r := problem.Remediation()
+	if r == nil || pf.confirm == nil {
 		return false
 	}
 	command := shellquote.Join(r.Command...)
@@ -41,7 +41,7 @@ func (pf credentialsPreflight) offerRemediation(ctx context.Context, problem *cr
 		fmt.Fprintln(pf.stdout)
 		return false
 	}
-	if err := pf.run(ctx, r); err != nil {
+	if err := pf.run(ctx, *r); err != nil {
 		if ctx.Err() == nil {
 			fmt.Fprintf(pf.stdout, "`%s` did not complete; run it yourself, then `pulumi up`.\n\n", command)
 		}

@@ -117,9 +117,8 @@ func preflightCloudCredentials(
 // checkPackage checks the credentials of a single provider and prints any problem it finds. If the
 // provider suggests a command to fix the problem and the user runs it, it checks them again.
 func (pf credentialsPreflight) checkPackage(ctx context.Context, desc workspace.PackageDescriptor) {
-	_, err := pf.check(ctx, desc)
-	problem, ok := errors.AsType[*credentialcheck.Problem](err)
-	if !ok {
+	_, problem, _ := pf.check(ctx, desc)
+	if problem == nil {
 		return
 	}
 	pf.printWarning(problem)
@@ -128,54 +127,57 @@ func (pf credentialsPreflight) checkPackage(ctx context.Context, desc workspace.
 	}
 
 	// The provider is loaded again, since it may have cached the credentials that failed.
-	info, err := pf.check(ctx, desc)
-	if err == nil {
+	info, problem, verified := pf.check(ctx, desc)
+	if verified {
 		fmt.Fprintf(pf.stdout, "%s credentials verified. %s\n\n", info.DisplayName, cmdutil.EmojiOr("✅", ""))
-	} else if problem, ok := errors.AsType[*credentialcheck.Problem](err); ok {
+	} else if problem != nil {
 		pf.printWarning(problem)
 	}
 }
 
-// check loads a single provider and runs [credentialcheck.Check] against it. It returns nil only if
-// the credentials were verified, and a [*credentialcheck.Problem] if the provider rejected them.
-// Any other error means the check was skipped, and is logged.
+// check loads a single provider and runs [credentialcheck.Check] against it. It returns the
+// problem if the provider rejected the credentials, and verified if it accepted them. If the check
+// could not run, it returns neither and logs why.
 func (pf credentialsPreflight) check(
 	ctx context.Context, desc workspace.PackageDescriptor,
-) (credentialcheck.Info, error) {
-	info, err := pf.loadAndCheck(ctx, desc)
-	if _, ok := errors.AsType[*credentialcheck.Problem](err); !ok && err != nil {
-		slog.DebugContext(ctx, "skipping credentials check", "provider", desc.Name, "err", err)
-	}
-	return info, err
-}
+) (info credentialcheck.Info, problem *credentialcheck.Problem, verified bool) {
+	var err error
+	defer func() {
+		if p, ok := errors.AsType[*credentialcheck.Problem](err); ok {
+			problem = p
+		} else if err != nil {
+			slog.DebugContext(ctx, "skipping credentials check", "provider", desc.Name, "err", err)
+		} else {
+			verified = true
+		}
+	}()
 
-func (pf credentialsPreflight) loadAndCheck(
-	ctx context.Context, desc workspace.PackageDescriptor,
-) (credentialcheck.Info, error) {
 	prov, err := pf.host.Provider(pf.pctx, desc.PluginDescriptor, env.Global())
 	if err != nil {
-		return credentialcheck.Info{}, err
+		return info, nil, false
 	}
 	defer contract.IgnoreClose(prov)
 
 	request := plugin.GetSchemaRequest{}
 	if parameterization := desc.Parameterization; parameterization != nil {
-		resp, err := prov.Parameterize(ctx, plugin.ParameterizeRequest{Parameters: &plugin.ParameterizeValue{
+		var resp plugin.ParameterizeResponse
+		resp, err = prov.Parameterize(ctx, plugin.ParameterizeRequest{Parameters: &plugin.ParameterizeValue{
 			Name: parameterization.Name, Version: parameterization.Version, Value: parameterization.Value,
 		}})
 		if err != nil {
-			return credentialcheck.Info{}, err
+			return info, nil, false
 		}
 		if resp.Name != parameterization.Name || !resp.Version.EQ(parameterization.Version) {
-			return credentialcheck.Info{}, fmt.Errorf("unexpected parameterization response: %s@%s",
-				resp.Name, resp.Version)
+			err = fmt.Errorf("unexpected parameterization response: %s@%s", resp.Name, resp.Version)
+			return info, nil, false
 		}
 		request.SubpackageName = resp.Name
 		request.SubpackageVersion = &resp.Version
 	}
 
 	target := &deploy.Target{Config: plaintextConfig(pf.cfg), Decrypter: config.NopDecrypter}
-	return credentialcheck.Check(ctx, prov, request, target)
+	info, err = credentialcheck.Check(ctx, prov, request, target)
+	return info, nil, false
 }
 
 // plaintextConfig returns cfg without its secure values, which this check does not decrypt.

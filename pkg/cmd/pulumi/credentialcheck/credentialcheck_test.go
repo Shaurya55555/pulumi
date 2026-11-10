@@ -384,9 +384,7 @@ func TestProbeRemediation(t *testing.T) {
 		}
 		var problem *Problem
 		require.ErrorAs(t, probe(t.Context(), awsProvider, mock, property.Map{}), &problem)
-		remediation, ok := problem.Remediation()
-		require.True(t, ok)
-		assert.Equal(t, signIn, remediation)
+		assert.Equal(t, &signIn, problem.Remediation())
 	})
 
 	t.Run("none", func(t *testing.T) {
@@ -401,7 +399,6 @@ func TestProbeRemediation(t *testing.T) {
 		}
 		var problem *Problem
 		require.ErrorAs(t, probe(t.Context(), awsProvider, mock, property.Map{}), &problem)
-		_, ok := problem.Remediation()
-		assert.False(t, ok)
+		assert.Nil(t, problem.Remediation())
 	})
 }
